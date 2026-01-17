@@ -16,9 +16,18 @@ try:
     with open(FILE_NAME, mode='w', newline='') as f:
         writer = csv.writer(f)
         
-        # Header matching your C code output
-        # sFlex, sX, sY, sZ, movement_intensity, dir
-        header = ["Timestamp", "Flex_Value", "Accel_X", "Accel_Y", "Accel_Z", "Intensity", "Direction"]
+        # Updated Header to match ALL 8 values from your C code
+        header = [
+            "Timestamp", 
+            "Flex_Value", 
+            "Accel_X", 
+            "Accel_Y", 
+            "Accel_Z", 
+            "Intensity", 
+            "Direction", 
+            "Rep_Count", 
+            "Beep_Freq"
+        ]
         writer.writerow(header)
 
         while True:
@@ -29,9 +38,9 @@ try:
                 if line:
                     data_points = line.split(',')
                     
-                    # Verify we received all 6 expected values
-                    if len(data_points) == 6:
-                        # Add a timestamp for time-series analysis
+                    # CHANGED: Now expecting 8 values to match your C printf
+                    if len(data_points) == 8:
+                        # High-precision timestamp
                         curr_time = time.strftime("%H:%M:%S")
                         row = [curr_time] + data_points
                         
@@ -39,11 +48,12 @@ try:
                         writer.writerow(row)
                         f.flush() 
                         
-                        # Print to terminal for real-time monitoring
-                        print(f"[{curr_time}] X:{data_points[1]} Y:{data_points[2]} Z:{data_points[3]} | {data_points[5]}")
+                        # Monitor output: focus on stability and reps
+                        # data_points[1,2,3] are your X, Y, Z values
+                        print(f"[{curr_time}] Reps: {data_points[6]} | X:{data_points[1]} Y:{data_points[2]} Z:{data_points[3]} | {data_points[5]}")
                     else:
-                        # Log if a line was corrupted or incomplete
-                        print(f"Malformed data received: {line}")
+                        # This avoids crashing when the Nucleo sends a partial line during a beep
+                        pass 
 
 except KeyboardInterrupt:
     print("\nRecording stopped. File saved.")
