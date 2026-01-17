@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&family=Nabla&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <div class="top_cont">
+        <p class="title">
+            SafeFlex
+        </p>
+    </div>
+
+    <div class="panel_cont" id="offset">
+        
+        <div class="panel">
+            <p id="panel_title">Stability</p>
+            <p id="panel_desc">(gyroscope)</p>
+
+            <div class="slider-wrap">
+                <div class="track">
+                  <div class="dot" id="offsetDot"></div>
+            </div>
+        </div>
+
+        <div class="labels">
+            <span>Unflexed</span>
+            <span>Mid flex</span>
+            <span>Fully flexed</span>
+        </div>
+        <div class="readout" id="offsetReadout">Flex: 0.00</div>
+    </div>
+
+
+
+    <div class="panel" id="steady">
+        <p id="panel_title">Range of Motion</p>
+        <p id="panel_desc">(flex thingy)</p>
+
+        <div class="slider-wrap">
+            <div class="track">
+                <div class="dot" id="flexDot"></div>
+            </div>
+        </div>
+
+        <div class="labels">
+            <span>Perfect</span>
+            <span>Shaky</span>
+            <span>Bad form</span>
+        </div>
+        <div class="readout" id="flexReadout">Flex: 0.00</div>
+    </div>
+
+    </div>
+
+    <script> //script to take flexAPI to html
+      const flexDot = document.getElementById("flexDot");
+      const flexReadout = document.getElementById("flexReadout");
+      const offsetDot = document.getElementById("offsetDot");
+      const offsetReadout = document.getElementById("offsetReadout");
+      const FLEX_MIN = 0;
+      const FLEX_MAX = 300;
+      const STABILITY_MIN = 0;
+      const STABILITY_MAX = 0.1;
+
+      function clamp(n, min, max) { 
+        return Math.min(Math.max(n, min), max);
+      }
+
+      function updateDot(dotEl, readoutEl, rawValue, label, min, max) {
+        const normalized = clamp((rawValue - min) / (max - min), 0, 1);
+        if (!dotEl || !readoutEl) {
+          return;
+        }
+        dotEl.style.top = `${(1 - normalized) * 100}%`;
+        readoutEl.textContent = `${label}: ${rawValue.toFixed(2)}`;
+      }
+
+      async function pollFlex() {
+        try {
+          const res = await fetch("/flex");
+          if (!res.ok) {
+            return;
+          }
+          const data = await res.json();
+          const rawValue = Number(data.flex);
+          if (Number.isFinite(rawValue)) {
+            updateDot(flexDot, flexReadout, rawValue, "Flex", FLEX_MIN, FLEX_MAX);
+          }
+        } catch (err) {
+          // Keep the last known value if the request fails.
+        }
+      }
+      async function pollStability() {
+        try {
+          const res = await fetch("/stability");
+          if (!res.ok) {
+            return;
+          }
+          const data = await res.json();
+          const intensity = Number(data.intensity);
+          if (Number.isFinite(intensity)) {
+            updateDot(offsetDot, offsetReadout, intensity, "Stability", STABILITY_MIN, STABILITY_MAX);
+          }
+        } catch (err) {
+          // Keep the last known value if the request fails.
+        }
+      }
+
+      updateDot(flexDot, flexReadout, FLEX_MIN, "Flex", FLEX_MIN, FLEX_MAX);
+      updateDot(offsetDot, offsetReadout, STABILITY_MIN, "Stability", STABILITY_MIN, STABILITY_MAX);
+      pollFlex();
+      pollStability();
+      setInterval(() => {
+        pollFlex();
+        pollStability();
+      }, 10);
+    </script>
+</body>
+</html>

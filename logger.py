@@ -2,6 +2,7 @@ import serial
 import csv
 import time
 
+
 # Update this to match your specific port
 SERIAL_PORT = "/dev/cu.usbmodem1103" 
 BAUD_RATE = 115200
@@ -22,7 +23,8 @@ try:
             "Flex_Value", 
             "Accel_X", 
             "Accel_Y", 
-            "Accel_Z", 
+            "Accel_Z",
+            "Stability", 
             "Intensity", 
             "Direction", 
             "Rep_Count", 
@@ -39,7 +41,7 @@ try:
                     data_points = line.split(',')
                     
                     # CHANGED: Now expecting 8 values to match your C printf
-                    if len(data_points) == 8:
+                    if len(data_points) == 9:
                         # High-precision timestamp
                         curr_time = time.strftime("%H:%M:%S")
                         row = [curr_time] + data_points
@@ -50,7 +52,7 @@ try:
                         
                         # Monitor output: focus on stability and reps
                         # data_points[1,2,3] are your X, Y, Z values
-                        print(f"[{curr_time}] Reps: {data_points[6]} | X:{data_points[1]} Y:{data_points[2]} Z:{data_points[3]} | {data_points[5]}")
+                        print(f"[{curr_time}] X:{data_points[1]} Y:{data_points[2]} Z:{data_points[3]} | Total Stability: {data_points[4]}")
                     else:
                         # This avoids crashing when the Nucleo sends a partial line during a beep
                         pass 
