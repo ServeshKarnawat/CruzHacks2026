@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="/static/css/main.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -61,35 +61,5 @@
     </div>
 
 
-
-
-
-
-
-    <script>
-      const dot = document.getElementById("offsetDot"); 
-      const readout = document.getElementById("offsetReadout"); 
-
-      let value = 0; 
-
-      function clamp(n, min, max) { 
-        return Math.min(Math.max(n, min), max); 
-      }
-
-      function updateDot(offset) {
-        const normalized = clamp(offset, 0, 1);
-        dot.style.left = `${normalized * 100}%`;
-        readout.textContent = `Flex: ${offset.toFixed(2)}`;
-      }
-
-      function tick() {
-        value += (Math.random() - 0.5) * 0.12;
-        value = clamp(value, 0, 1);
-        updateDot(value);
-      }
-
-      updateDot(0);
-      setInterval(tick, 250);
-    </script>
 </body>
 </html>

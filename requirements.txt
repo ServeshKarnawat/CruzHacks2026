@@ -3,3 +3,4 @@ uvicorn
 fastdtw
 numpy
 scipy
+jinja2
