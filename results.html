@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sensor Graphs</title>
+    <style>
+      :root {
+        --bg: #f2efe8;
+        --panel: #fff8f0;
+        --ink: #2d2a24;
+        --accent: #d26a4f;
+        --grid: #d7cfc2;
+      }
+      body {
+        margin: 0;
+        font-family: "Georgia", "Times New Roman", serif;
+        background: linear-gradient(180deg, #efe7da 0%, #f7f3ed 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 3rem;
+      }
+      header h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2.2rem;
+        letter-spacing: 0.5px;
+      }
+      header p {
+        margin: 0 0 2rem;
+        color: #5b554a;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-top: 2rem;
+      }
+      .elapsed {
+        font-size: 0.95rem;
+        color: #6a6258;
+        padding: 0.35rem 0.65rem;
+        border: 1px solid #e0d6c6;
+        border-radius: 999px;
+        background: #fffaf3;
+      }
+      .share-btn {
+        border: 1px solid #d9c9b6;
+        background: #fef4e8;
+        color: #6b3d2f;
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+      }
+      .share-btn:hover {
+        background: #f9e7d6;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid #e2d8c7;
+        border-radius: 16px;
+        padding: 1rem 1rem 1.25rem;
+        box-shadow: 0 8px 20px rgba(60, 50, 30, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 0.75rem;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        color: #6b3d2f;
+      }
+      canvas {
+        width: 100%;
+        height: 260px;
+        border-radius: 10px;
+        background: #fffdf8;
+        border: 1px solid #eadfcd;
+      }
+      .legend {
+        margin-top: 0.75rem;
+        font-size: 0.9rem;
+        color: #6a6258;
+      }
+      .legend span {
+        display: inline-block;
+        width: 14px;
+        height: 2px;
+        background: var(--accent);
+        margin-right: 0.4rem;
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Sensor Stream</h1>
+        <p>Offset and steadiness plotted against time from the latest CSV file.</p>
+      </header>
+      <section class="grid">
+        <div class="card">
+          <h2>Offset vs Time</h2>
+          <canvas id="offsetChart" width="900" height="320"></canvas>
+          <div class="legend"><span></span>Offset (reference line at 0)</div>
+        </div>
+        <div class="card">
+          <h2>Steadiness vs Time</h2>
+          <canvas id="steadinessChart" width="900" height="320"></canvas>
+          <div class="legend"><span></span>Steadiness (positive only)</div>
+        </div>
+      </section>
+      <div class="meta">
+        <span class="elapsed">Elapsed: 00:00</span>
+        <button class="share-btn" type="button">Share</button>
+      </div>
+    </div>
+
+    <script>
+      async function loadData() {
+        const res = await fetch("/data");
+        if (!res.ok) {
+          throw new Error("Failed to load data");
+        }
+        return res.json();
+      }
+
+      function drawChart(canvas, labels, values, options) {
+        const ctx = canvas.getContext("2d");
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        const minY = options.minY;
+        const maxY = options.maxY;
+        const rangeY = maxY - minY || 1;
+
+        ctx.strokeStyle = options.gridColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i++) {
+          const y = padding.top + (chartHeight / 4) * i;
+          ctx.moveTo(padding.left, y);
+          ctx.lineTo(width - padding.right, y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = "#5b554a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top);
+        ctx.lineTo(padding.left, height - padding.bottom);
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.stroke();
+
+        if (options.referenceY !== null) {
+          const refY = padding.top + chartHeight - ((options.referenceY - minY) / rangeY) * chartHeight;
+          ctx.strokeStyle = options.referenceColor;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(padding.left, refY);
+          ctx.lineTo(width - padding.right, refY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.strokeStyle = options.lineColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        values.forEach((val, index) => {
+          const x = padding.left + (chartWidth * index) / Math.max(values.length - 1, 1);
+          const y = padding.top + chartHeight - ((val - minY) / rangeY) * chartHeight;
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        ctx.stroke();
+
+        ctx.fillStyle = options.lineColor;
+        values.forEach((val, index) => {
+          const x = padding.left + (chartWidth * index) / Math.max(values.length - 1, 1);
+          const y = padding.top + chartHeight - ((val - minY) / rangeY) * chartHeight;
+          ctx.beginPath();
+          ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.fillStyle = "#5b554a";
+        ctx.font = "14px Georgia, serif";
+        ctx.textAlign = "center";
+        ctx.fillText(options.xLabel, padding.left + chartWidth / 2, height - 10);
+
+        ctx.save();
+        ctx.translate(15, padding.top + chartHeight / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(options.yLabel, 0, 0);
+        ctx.restore();
+
+        ctx.textAlign = "right";
+        ctx.font = "12px Georgia, serif";
+        for (let i = 0; i <= 4; i++) {
+          const value = maxY - (rangeY / 4) * i;
+          const y = padding.top + (chartHeight / 4) * i;
+          ctx.fillText(value.toFixed(1), padding.left - 8, y + 4);
+        }
+
+        if (labels.length > 1) {
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#6a6258";
+          const steps = 4;
+          for (let i = 0; i <= steps; i++) {
+            const index = Math.round((labels.length - 1) * (i / steps));
+            const x = padding.left + (chartWidth * index) / (labels.length - 1);
+            ctx.fillText(labels[index], x, height - 20);
+          }
+        }
+      }
+
+      function parseNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+      }
+
+      function computeBounds(values, clampMinZero) {
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+        if (clampMinZero) {
+          min = 0;
+        }
+        if (min === max) {
+          max = min + 1;
+        }
+        return { min, max };
+      }
+
+      function formatElapsed(totalSeconds) {
+        const secs = Math.max(0, Math.round(totalSeconds));
+        const minutes = Math.floor(secs / 60);
+        const seconds = secs % 60;
+        return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+      }
+
+      async function render() {
+        let data = [];
+        try {
+          data = await loadData();
+        } catch (err) {
+          const message = document.createElement("p");
+          message.textContent = "Unable to load data. Start the FastAPI server and reload.";
+          message.style.color = "#7a3c2c";
+          document.querySelector(".wrap").appendChild(message);
+          return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+          const message = document.createElement("p");
+          message.textContent = "No data found in the CSV.";
+          message.style.color = "#7a3c2c";
+          document.querySelector(".wrap").appendChild(message);
+          return;
+        }
+
+        const labels = data.map(row => row.time);
+        const offsets = data.map(row => parseNumber(row.offset));
+        const steadiness = data.map(row => parseNumber(row.steadiness));
+        const times = data.map(row => parseNumber(row.time));
+        const totalTime = Math.max(...times);
+        const elapsedEl = document.querySelector(".elapsed");
+        if (elapsedEl && Number.isFinite(totalTime)) {
+          elapsedEl.textContent = "Elapsed: " + formatElapsed(totalTime);
+        }
+
+        const rawOffsetBounds = computeBounds(offsets, false);
+        const maxAbs = Math.max(Math.abs(rawOffsetBounds.min), Math.abs(rawOffsetBounds.max));
+        const offsetBounds = { min: -maxAbs, max: maxAbs };
+        drawChart(
+          document.getElementById("offsetChart"),
+          labels,
+          offsets,
+          {
+            minY: offsetBounds.min,
+            maxY: offsetBounds.max,
+            lineColor: "#d26a4f",
+            gridColor: "#e4d8c6",
+            referenceY: 0,
+            referenceColor: "#6b3d2f",
+            xLabel: "time",
+            yLabel: "offset"
+          }
+        );
+
+        const steadinessBounds = computeBounds(steadiness, true);
+        drawChart(
+          document.getElementById("steadinessChart"),
+          labels,
+          steadiness,
+          {
+            minY: steadinessBounds.min,
+            maxY: steadinessBounds.max,
+            lineColor: "#4f7fb1",
+            gridColor: "#e4d8c6",
+            referenceY: null,
+            referenceColor: "#6b3d2f",
+            xLabel: "time",
+            yLabel: "steadiness"
+          }
+        );
+      }
+
+      render();
+    </script>
+  </body>
+</html>
