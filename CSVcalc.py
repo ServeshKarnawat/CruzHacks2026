@@ -25,11 +25,10 @@ try:
             "Accel_Y", 
             "Accel_Z",
             "Stability", 
-            "Magnitude", 
+            "Intensity", 
             "Direction", 
             "Rep_Count", 
-            "Beep_Freq",
-            
+            "Beep_Freq"
         ]
         writer.writerow(header)
 

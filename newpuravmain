@@ -115,8 +115,8 @@ int main(void) {
         prevX = sX; prevY = sY; prevZ = sZ;
 
         //debug csv
-        printf("%.1f,%.3f,%.3f,%.3f,%.3f,%.4f,%s,%d,%d\r\n", 
-       sFlex, sX, sY, sZ, stability, movement_intensity, dir, rep_count, freq);
+        printf("%.1f,%.3f,%.3f,%.3f,%.3f,%.4f,%s,%d\r\n", 
+       sFlex, sX, sY, sZ, stability, movement_intensity, dir, rep_count);
 
         for(volatile int i = 0; i < 1500; i++); 
     }
