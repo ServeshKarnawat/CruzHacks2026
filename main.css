@@ -95,12 +95,12 @@ body{
     position: relative;
     height: 10px;
     width: 100%;
-    background: linear-gradient(
-        90deg,
-        #d6604a 0%,
-        #e9b44c 45%,
-        #4f8a5b 100%
-    );
+    background: linear-gradient(to right, 
+        #ff4d4d, /* Soft Red */
+        #ffeb3b, /* Bright Yellow */
+        #4caf50, /* Success Green */
+        #ffeb3b, /* Bright Yellow */
+        #ff4d4d  /* Soft Red */);
     border-radius: 999px;
     border: 1px solid #d4c3af;
 }
