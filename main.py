@@ -45,14 +45,13 @@ def data() -> JSONResponse:
         rows = []
         for index, row in enumerate(reader, start=1):
             # Keep strings here; the frontend parses numbers and formats labels.
+            flex_value = clean(
+                row.get("flex") or row.get("Filtered_ADC") or row.get("Angle") or row.get("offset")
+            )
             mapped = {
                 "time": clean(row.get("time") or row.get("Timestamp") or row.get("timestamp")),
-                "offset": clean(
-                    row.get("flex")
-                    or row.get("Filtered_ADC")
-                    or row.get("Angle")
-                    or row.get("offset")
-                ),
+                "flex": flex_value,
+                "offset": flex_value,
                 "steadiness": clean(row.get("steadiness") or row.get("Raw_ADC")),
             }
             if index % 380 == 0:

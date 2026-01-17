@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="static/css/main.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
             <span>Mid flex</span>
             <span>Fully flexed</span>
         </div>
-        <div class="readout" id="offsetReadout">Offset: 0.00</div>
+        <div class="readout" id="offsetReadout">Flex: 0.00</div>
     </div>
 
 
@@ -60,52 +60,41 @@
 
     </div>
 
-
-
-
-
-
-
-    <script>
-      const offsetDot = document.getElementById("offsetDot"); 
-      const offsetReadout = document.getElementById("offsetReadout"); 
-      const flexDot = document.getElementById("flexDot"); 
-      const flexReadout = document.getElementById("flexReadout"); 
-
+    <script> //script to take flexAPI to html
+      const dot = document.getElementById("flexDot");
+      const readout = document.getElementById("flexReadout");
       const FLEX_MIN = 0;
       const FLEX_MAX = 1023;
 
       function clamp(n, min, max) { 
-        return Math.min(Math.max(n, min), max); 
+        return Math.min(Math.max(n, min), max);
       }
 
-      function updateDot(dotEl, readoutEl, rawValue, label) {
+      function updateDot(rawValue) {
         const normalized = clamp((rawValue - FLEX_MIN) / (FLEX_MAX - FLEX_MIN), 0, 1);
-        dotEl.style.left = `${normalized * 100}%`;
-        readoutEl.textContent = `${label}: ${rawValue.toFixed(2)}`;
+        dot.style.left = `${normalized * 100}%`;
+        readout.textContent = `Flex: ${rawValue.toFixed(2)}`;
       }
 
-      async function pollLatest() {
+      async function pollFlex() {
         try {
-          const res = await fetch("/latest");
+          const res = await fetch("/flex");
           if (!res.ok) {
             return;
           }
           const data = await res.json();
-          const flexValue = Number(data.flex);
-          // Offset slider stays static; only flex is live for now.
-          if (Number.isFinite(flexValue)) {
-            updateDot(flexDot, flexReadout, flexValue, "Flex");
+          const rawValue = Number(data.flex);
+          if (Number.isFinite(rawValue)) {
+            updateDot(rawValue);
           }
         } catch (err) {
-          // Keep last value if polling fails.
+          // Keep the last known value if the request fails.
         }
       }
 
-      updateDot(offsetDot, offsetReadout, FLEX_MIN, "Offset");
-      updateDot(flexDot, flexReadout, FLEX_MIN, "Flex");
-      pollLatest();
-      setInterval(pollLatest, 500);
+      updateDot(FLEX_MIN);
+      pollFlex();
+      setInterval(pollFlex, 500);
     </script>
 </body>
 </html>

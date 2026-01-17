@@ -3,163 +3,60 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sensor Graphs</title>
+    <title>Flex vs Time</title>
     <style>
-      :root {
-        --bg: #f2efe8;
-        --panel: #fff8f0;
-        --ink: #2d2a24;
-        --accent: #d26a4f;
-        --grid: #d7cfc2;
-      }
       body {
         margin: 0;
-        font-family: "Georgia", "Times New Roman", serif;
-        background: linear-gradient(180deg, #efe7da 0%, #f7f3ed 100%);
-        color: var(--ink);
+        padding: 2rem;
+        font-family: Arial, sans-serif;
+        background: #f7f4ee;
+        color: #2d2a24;
       }
-      .wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2rem 1.5rem 3rem;
-      }
-      header h1 {
-        margin: 0 0 0.5rem;
-        font-size: 2.2rem;
-        letter-spacing: 0.5px;
-      }
-      header p {
-        margin: 0 0 2rem;
-        color: #5b554a;
-      }
-      .meta {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        margin-top: 2rem;
-      }
-      .elapsed {
-        font-size: 0.95rem;
-        color: #6a6258;
-        padding: 0.35rem 0.65rem;
-        border: 1px solid #e0d6c6;
-        border-radius: 999px;
-        background: #fffaf3;
-      }
-      .share-btn {
-        border: 1px solid #d9c9b6;
-        background: #fef4e8;
-        color: #6b3d2f;
-        padding: 0.45rem 0.9rem;
-        border-radius: 999px;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        cursor: pointer;
-      }
-      .share-btn:hover {
-        background: #f9e7d6;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-      }
-      .card {
-        background: var(--panel);
-        border: 1px solid #e2d8c7;
-        border-radius: 16px;
-        padding: 1rem 1rem 1.25rem;
-        box-shadow: 0 8px 20px rgba(60, 50, 30, 0.08);
-      }
-      .card h2 {
-        margin: 0 0 0.75rem;
-        font-size: 1.2rem;
-        text-transform: uppercase;
-        letter-spacing: 1.4px;
-        color: #6b3d2f;
+      h1 {
+        margin: 0 0 1rem;
+        font-size: 1.6rem;
       }
       canvas {
         width: 100%;
-        height: 260px;
-        border-radius: 10px;
+        max-width: 900px;
+        height: 380px;
+        border: 1px solid #d9d1c5;
         background: #fffdf8;
-        border: 1px solid #eadfcd;
-      }
-      .legend {
-        margin-top: 0.75rem;
-        font-size: 0.9rem;
-        color: #6a6258;
-      }
-      .legend span {
-        display: inline-block;
-        width: 14px;
-        height: 2px;
-        background: var(--accent);
-        margin-right: 0.4rem;
-        transform: translateY(-2px);
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header>
-        <h1>Sensor Stream</h1>
-        <p>Offset and steadiness plotted against time from the latest CSV file.</p>
-      </header>
-      <section class="grid">
-        <div class="card">
-          <h2>Flex vs Time</h2>
-          <canvas id="offsetChart" width="900" height="320"></canvas>
-          <div class="legend"><span></span>Flex (starts at 0)</div>
-        </div>
-        <div class="card">
-          <h2>Steadiness vs Time</h2>
-          <canvas id="steadinessChart" width="900" height="320"></canvas>
-          <div class="legend"><span></span>Steadiness (positive only)</div>
-        </div>
-      </section>
-      <div class="meta">
-        <span class="elapsed">Elapsed: 00:00</span>
-        <button class="share-btn" type="button">Share</button>
-      </div>
-    </div>
+    <h1>Flex vs Time</h1>
+    <canvas id="chart" width="900" height="380"></canvas>
 
     <script>
-      async function loadData() {
-        const res = await fetch("/data");
-        if (!res.ok) {
-          throw new Error("Failed to load data");
-        }
-        return res.json();
+      const canvas = document.getElementById("chart");
+      const ctx = canvas.getContext("2d");
+
+      const padding = { left: 60, right: 20, top: 20, bottom: 50 };
+
+      function toNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
       }
 
-      function drawChart(canvas, labels, values, options) {
-        const ctx = canvas.getContext("2d");
-        const width = canvas.width;
-        const height = canvas.height;
-        ctx.clearRect(0, 0, width, height);
-
-        const padding = { left: 50, right: 20, top: 20, bottom: 40 };
-        const chartWidth = width - padding.left - padding.right;
-        const chartHeight = height - padding.top - padding.bottom;
-
-        const minY = options.minY;
-        const maxY = options.maxY;
-        const rangeY = maxY - minY || 1;
-
-        ctx.strokeStyle = options.gridColor;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let i = 0; i <= 4; i++) {
-          const y = padding.top + (chartHeight / 4) * i;
-          ctx.moveTo(padding.left, y);
-          ctx.lineTo(width - padding.right, y);
+      function parseTime(value) {
+        const parts = String(value).split(":").map(Number);
+        if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) {
+          return NaN;
         }
-        ctx.stroke();
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
 
+      function formatTime(seconds) {
+        const s = Math.max(0, Math.round(seconds));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      }
+
+      function drawAxes(width, height, maxX, maxY) {
         ctx.strokeStyle = "#5b554a";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -168,175 +65,86 @@
         ctx.lineTo(width - padding.right, height - padding.bottom);
         ctx.stroke();
 
-        if (options.referenceY !== null) {
-          const refY = padding.top + chartHeight - ((options.referenceY - minY) / rangeY) * chartHeight;
-          ctx.strokeStyle = options.referenceColor;
-          ctx.setLineDash([6, 6]);
-          ctx.beginPath();
-          ctx.moveTo(padding.left, refY);
-          ctx.lineTo(width - padding.right, refY);
-          ctx.stroke();
-          ctx.setLineDash([]);
+        ctx.fillStyle = "#5b554a";
+        ctx.font = "14px Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("time", padding.left + (width - padding.left - padding.right) / 2, height - 15);
+
+        ctx.save();
+        ctx.translate(18, padding.top + (height - padding.top - padding.bottom) / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("flex", 0, 0);
+        ctx.restore();
+
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        ctx.fillStyle = "#6a6258";
+        ctx.font = "12px Arial, sans-serif";
+
+        const ticks = 5;
+        ctx.textAlign = "center";
+        for (let i = 0; i <= ticks; i++) {
+          const x = padding.left + (chartWidth * i) / ticks;
+          const value = (maxX * i) / ticks;
+          ctx.fillText(formatTime(value), x, height - 25);
         }
 
-        ctx.strokeStyle = options.lineColor;
-        ctx.lineWidth = 2.5;
+        ctx.textAlign = "right";
+        for (let i = 0; i <= ticks; i++) {
+          const y = padding.top + chartHeight - (chartHeight * i) / ticks;
+          const value = (maxY * i) / ticks;
+          ctx.fillText(value.toFixed(1), padding.left - 8, y + 4);
+        }
+      }
+
+      function drawLine(times, values, maxX, maxY) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        ctx.strokeStyle = "#d26a4f";
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        values.forEach((val, index) => {
-          const x = padding.left + (chartWidth * index) / Math.max(values.length - 1, 1);
-          const y = padding.top + chartHeight - ((val - minY) / rangeY) * chartHeight;
+
+        values.forEach((value, index) => {
+          const x = padding.left + (times[index] / maxX) * chartWidth;
+          const y = padding.top + chartHeight - (value / maxY) * chartHeight;
           if (index === 0) {
-            ctx.moveTo(x, y);
+            ctx.moveTo(x, y); 
           } else {
             ctx.lineTo(x, y);
           }
         });
+
         ctx.stroke();
-
-        ctx.fillStyle = options.lineColor;
-        values.forEach((val, index) => {
-          const x = padding.left + (chartWidth * index) / Math.max(values.length - 1, 1);
-          const y = padding.top + chartHeight - ((val - minY) / rangeY) * chartHeight;
-          ctx.beginPath();
-          ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        ctx.fillStyle = "#5b554a";
-        ctx.font = "14px Georgia, serif";
-        ctx.textAlign = "center";
-        ctx.fillText(options.xLabel, padding.left + chartWidth / 2, height - 10);
-
-        ctx.save();
-        ctx.translate(15, padding.top + chartHeight / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText(options.yLabel, 0, 0);
-        ctx.restore();
-
-        ctx.textAlign = "right";
-        ctx.font = "12px Georgia, serif";
-        for (let i = 0; i <= 4; i++) {
-          const value = maxY - (rangeY / 4) * i;
-          const y = padding.top + (chartHeight / 4) * i;
-          ctx.fillText(value.toFixed(1), padding.left - 8, y + 4);
-        }
-
-        if (labels.length > 1) {
-          ctx.textAlign = "center";
-          ctx.fillStyle = "#6a6258";
-          const step = Math.max(1, options.labelStep || 1);
-          for (let index = 0; index < labels.length; index += step) {
-            const x = padding.left + (chartWidth * index) / Math.max(labels.length - 1, 1);
-            ctx.fillText(labels[index], x, height - 20);
-          }
-          if ((labels.length - 1) % step !== 0) {
-            const lastIndex = labels.length - 1;
-            const x = padding.left + (chartWidth * lastIndex) / Math.max(labels.length - 1, 1);
-            ctx.fillText(labels[lastIndex], x, height - 20);
-          }
-        }
-      }
-
-      function parseNumber(value) {
-        const num = Number(value);
-        return Number.isFinite(num) ? num : 0;
-      }
-
-      function computeBounds(values, clampMinZero) {
-        let min = Math.min(...values);
-        let max = Math.max(...values);
-        if (clampMinZero) {
-          min = 0;
-        }
-        if (min === max) {
-          max = min + 1;
-        }
-        return { min, max };
-      }
-
-      function formatElapsed(totalSeconds) {
-        const secs = Math.max(0, Math.round(totalSeconds));
-        const minutes = Math.floor(secs / 60);
-        const seconds = secs % 60;
-        return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
-      }
-
-      function looksLikeTimestamp(value) {
-        return typeof value === "string" && value.includes(":");
       }
 
       async function render() {
-        let data = [];
-        try {
-          data = await loadData();
-        } catch (err) {
-          const message = document.createElement("p");
-          message.textContent = "Unable to load data. Start the FastAPI server and reload.";
-          message.style.color = "#7a3c2c";
-          document.querySelector(".wrap").appendChild(message);
-          return;
-        }
+        const res = await fetch("/data"); //fetch data from csv
+        const data = await res.json(); 
 
         if (!Array.isArray(data) || data.length === 0) {
-          const message = document.createElement("p");
-          message.textContent = "No data found in the CSV.";
-          message.style.color = "#7a3c2c";
-          document.querySelector(".wrap").appendChild(message);
+          ctx.fillText("No data to plot.", 100, 100);
           return;
         }
 
-        const labels = data.map(row => row.time);
-        const flexValues = data.map(row => parseNumber(row.flex ?? row.offset));
-        const steadiness = data.map(row => parseNumber(row.steadiness));
-        const times = labels;
-        const numericTimes = times.map(value => parseNumber(value));
-        const totalTime = Math.max(...numericTimes);
-        const elapsedEl = document.querySelector(".elapsed");
-        if (elapsedEl) {
-          const lastLabel = times[times.length - 1];
-          if (looksLikeTimestamp(lastLabel)) {
-            elapsedEl.textContent = "Time: " + lastLabel;
-          } else if (Number.isFinite(totalTime)) {
-            elapsedEl.textContent = "Elapsed: " + formatElapsed(totalTime);
-          }
+        const rawTimes = data.map(row => parseTime(row.time));
+        const baseTime = rawTimes.find(t => Number.isFinite(t));
+        if (!Number.isFinite(baseTime)) {
+          ctx.fillText("Invalid timestamps.", 100, 100);
+          return;
         }
 
-        const flexBounds = computeBounds(flexValues, true);
-        const labelStep = 1;
-        drawChart(
-          document.getElementById("offsetChart"),
-          labels,
-          flexValues,
-          {
-            minY: flexBounds.min,
-            maxY: flexBounds.max,
-            lineColor: "#d26a4f",
-            gridColor: "#e4d8c6",
-            referenceY: 0,
-            referenceColor: "#6b3d2f",
-            xLabel: "time",
-            yLabel: "flex",
-            labelStep
-          }
-        );
+        const times = rawTimes.map(t => Math.max(0, t - baseTime));
+        const flexValues = data.map(row => toNumber(row.flex));
+        const maxX = Math.max(1, ...times);
+        const maxY = Math.max(1, ...flexValues);
 
-        const steadinessBounds = computeBounds(steadiness, true);
-        drawChart(
-          document.getElementById("steadinessChart"),
-          labels,
-          steadiness,
-          {
-            minY: steadinessBounds.min,
-            maxY: steadinessBounds.max,
-            lineColor: "#4f7fb1",
-            gridColor: "#e4d8c6",
-            referenceY: null,
-            referenceColor: "#6b3d2f",
-            xLabel: "time",
-            yLabel: "steadiness",
-            labelStep
-          }
-        );
+        ctx.clearRect(0, 0, canvas.width, canvas.height); //wipe chart
+        drawAxes(canvas.width, canvas.height, maxX, maxY);
+        drawLine(times, flexValues, maxX, maxY);
       }
 
       render();

@@ -5,9 +5,10 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "flex_sensor_data.csv"
-INDEX_PATH = BASE_DIR / "index.html"
+DATA_PATH = BASE_DIR / "arm_stability_data.csv"
+INDEX_PATH = BASE_DIR / "templates" / "index.html"
 CSS_PATH = BASE_DIR / "main.css"
+STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
 
 app = FastAPI()
 
@@ -23,15 +24,16 @@ def index() -> HTMLResponse:
     return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
 
 
-@app.get("/main.css")
-def main_css() -> FileResponse: #get main.css
-    if not CSS_PATH.exists():
+
+@app.get("/static/css/main.css")
+def static_main_css() -> FileResponse: #get static/css/main.css
+    if not STATIC_CSS_PATH.exists():
         return FileResponse("", status_code=404)
-    return FileResponse(CSS_PATH)
+    return FileResponse(STATIC_CSS_PATH)
 
 
-@app.get("/latest")
-def latest() -> JSONResponse: #get latest csv data
+@app.get("/flex")
+def flex() -> JSONResponse: #get latest csv data
     if not DATA_PATH.exists():
         return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) #throw if no datapath
 
@@ -44,8 +46,6 @@ def latest() -> JSONResponse: #get latest csv data
     if latest_row is None: 
         return JSONResponse({"error": "No data in CSV"}, status_code=404)
 
-    time_value = clean(
-        latest_row.get("Timestamp") #get timestamp
-    )
-    flex_value = clean(latest_row.get("Filtered_ADC")) #get filtered_ADC
-    return JSONResponse({"time": time_value, "flex": flex_value}) #sends JSON response with flex abd timestamp
+
+    flex_value = clean(latest_row.get("Flex_Value")) #get flex value
+    return JSONResponse({ "flex": flex_value}) #sends JSON response with flex value
