@@ -12,11 +12,11 @@ CSS_PATH = BASE_DIR / "main.css"
 app = FastAPI()
 
 
-def clean(value: object) -> str:
-    return str(value).strip() if value is not None else ""
+def clean(value: object) -> str: #converts values to trimmed string
+    return str(value).strip() if value is not None else "" 
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse) #Get index.html
 def index() -> HTMLResponse:
     if not INDEX_PATH.exists():
         return HTMLResponse("Missing index.html", status_code=404)
@@ -24,34 +24,28 @@ def index() -> HTMLResponse:
 
 
 @app.get("/main.css")
-def main_css() -> FileResponse:
+def main_css() -> FileResponse: #get main.css
     if not CSS_PATH.exists():
         return FileResponse("", status_code=404)
     return FileResponse(CSS_PATH)
 
 
 @app.get("/latest")
-def latest() -> JSONResponse:
+def latest() -> JSONResponse: #get latest csv data
     if not DATA_PATH.exists():
-        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404)
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) #throw if no datapath
 
     latest_row = None
     with DATA_PATH.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            latest_row = row
+        reader = csv.DictReader(handle) #reads the CSV and turns each row into a dictionary keyed by the header names from the first row.
+        for row in reader: # Iterate through all rows so the last row is the latest.
+            latest_row = row # Overwrite each loop; final value is the newest row.
 
-    if latest_row is None:
+    if latest_row is None: 
         return JSONResponse({"error": "No data in CSV"}, status_code=404)
 
     time_value = clean(
-        latest_row.get("time") or latest_row.get("Timestamp") or latest_row.get("timestamp")
+        latest_row.get("Timestamp") #get timestamp
     )
-    flex_value = clean(
-        latest_row.get("flex")
-        or latest_row.get("Filtered_ADC")
-        or latest_row.get("Angle")
-        or latest_row.get("offset")
-    )
-    raw_value = clean(latest_row.get("Raw_ADC") or latest_row.get("steadiness"))
-    return JSONResponse({"time": time_value, "flex": flex_value, "raw": raw_value})
+    flex_value = clean(latest_row.get("Filtered_ADC")) #get filtered_ADC
+    return JSONResponse({"time": time_value, "flex": flex_value}) #sends JSON response with flex abd timestamp
