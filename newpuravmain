@@ -99,6 +99,8 @@ int main(void) {
         float deltaZ = sZ - prevZ;
         float movement_intensity = sqrtf(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ);
 
+    
+
         //direction
         char* dir = "STILL";
         if (movement_intensity > MOTION_THRESHOLD) {
