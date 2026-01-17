@@ -1,4 +1,5 @@
 import csv
+import io
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -12,9 +13,46 @@ STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
 
 app = FastAPI()
 
+_csv_header = None
+_last_pos = 0
+_last_row = None
+
 
 def clean(value: object) -> str: #converts values to trimmed string
     return str(value).strip() if value is not None else "" 
+
+
+def get_latest_row() -> dict | None:
+    global _csv_header, _last_pos, _last_row
+    if not DATA_PATH.exists():
+        return None
+
+    file_size = DATA_PATH.stat().st_size
+    if _last_pos > file_size:
+        _csv_header = None
+        _last_pos = 0
+        _last_row = None
+
+    with DATA_PATH.open(newline="", encoding="utf-8") as handle:
+        if _last_pos == 0 or _csv_header is None:
+            reader = csv.DictReader(handle)
+            _csv_header = reader.fieldnames
+            for row in reader:
+                _last_row = row
+            _last_pos = handle.tell()
+            return _last_row
+
+        handle.seek(_last_pos)
+        new_data = handle.read()
+        _last_pos = handle.tell()
+
+    if not new_data.strip() or not _csv_header:
+        return _last_row
+
+    reader = csv.DictReader(io.StringIO(new_data), fieldnames=_csv_header)
+    for row in reader:
+        _last_row = row
+    return _last_row
 
 
 @app.get("/", response_class=HTMLResponse) #Get index.html
@@ -37,15 +75,28 @@ def flex() -> JSONResponse: #get latest csv data
     if not DATA_PATH.exists():
         return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) #throw if no datapath
 
-    latest_row = None
-    with DATA_PATH.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle) #reads the CSV and turns each row into a dictionary keyed by the header names from the first row.
-        for row in reader: # Iterate through all rows so the last row is the latest.
-            latest_row = row # Overwrite each loop; final value is the newest row.
-
+    latest_row = get_latest_row()
     if latest_row is None: 
         return JSONResponse({"error": "No data in CSV"}, status_code=404)
 
 
     flex_value = clean(latest_row.get("Flex_Value")) #get flex value
     return JSONResponse({ "flex": flex_value}) #sends JSON response with flex value
+
+
+
+@app.get("/stability")
+def stability() -> JSONResponse: #get latest accel data
+    if not DATA_PATH.exists():
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) 
+
+    latest_row = get_latest_row()
+    if latest_row is None:
+        return JSONResponse({"error": "No data in CSV"}, status_code=404)
+
+    try:
+        intensity = float(clean(latest_row.get("Intensity")))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "Invalid intensity data"}, status_code=400)
+
+    return JSONResponse({"intensity": intensity})

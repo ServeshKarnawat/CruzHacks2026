@@ -54,7 +54,7 @@ def main() -> None:
         az = max(-0.1, min(0.55, az))
 
         append_row(DATA_PATH, flex, ax, ay, az)
-        time.sleep(0.5)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":
