@@ -1,0 +1,131 @@
+* {
+    box-sizing: border-box;
+}
+
+body{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    /* justify-content: center; */
+    background-color: rgb(61, 61, 61);
+}
+
+.top_cont{
+    /* border: 1px solid green; */
+    width: 98%;
+    height: 10vh;
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    /* position: absolute; */
+    margin-top: 2vh;
+}
+.title{
+    font-family: "Nabla";
+    font-size: 10vh;
+    /* border: 1px solid black; */
+    width: 100%;
+    /* position: absolute; */
+    text-align: center;
+}
+
+.panel_cont{
+    margin-top: 3vh;
+    /* border: 1px blue solid; */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    width: 98%;
+    gap: 2vh;
+}
+
+.panel_cont p{
+    font-family: "Lexend Deca";
+    text-align: center;
+}
+
+.panel_title{
+    border: 1px solid red;
+    width: 50vw;
+    text-align: center;
+    font-size: 4vh;
+
+}
+
+#panel_title{
+    font-size: 2.5vw;
+    font-weight: bold;
+    margin: 0;
+}
+#panel_desc{
+    margin: 0.5vh;
+}
+
+
+:root {
+    --bg: #efe6d8;
+    --panel: #ffff;
+    --ink: #2d2a24;
+    --accent: #d26a4f;
+    --track: #d9c9b6;
+    --glow: rgba(210, 106, 79, 0.35);
+}
+
+.panel {
+    width: 60vw;
+    padding: 2.5rem 2rem;
+    background: var(--panel);
+    border-radius: 22px;
+    box-shadow: 0 16px 30px rgba(60, 50, 30, 0.12);
+    border: 1px solid white;
+    align-self: center;
+
+}
+
+.slider-wrap {
+    position: relative;
+    height: 5vh;
+    display: flex;
+    align-items: center;
+}
+.track {
+    position: relative;
+    height: 10px;
+    width: 100%;
+    background: linear-gradient(to right, 
+        #ff4d4d, /* Soft Red */
+        #ffeb3b, /* Bright Yellow */
+        #4caf50, /* Success Green */
+        #ffeb3b, /* Bright Yellow */
+        #ff4d4d  /* Soft Red */);
+    border-radius: 999px;
+    border: 1px solid #d4c3af;
+}
+.dot {
+    position: absolute;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 16px var(--glow);
+    transition: left 0.15s ease-out;
+}
+.labels {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #6a6258;
+}
+.readout {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    color: #5b3c2d;
+    text-align: center;
+    letter-spacing: 0.5px;
+}

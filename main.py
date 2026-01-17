@@ -12,3 +12,4 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def read_item(request: Request):
         return templates.TemplateResponse("index.html", 
                                           {"request": request, "message": "index.html"})
+
