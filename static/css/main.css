@@ -94,7 +94,7 @@ body{
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 10px;
+    padding: 0px;
 }
 .track {
     position: relative;
@@ -111,9 +111,9 @@ body{
 .dot {
     position: absolute;
     left: 50%;
+    transform: translate(-50%, -100%);
     width: 30px;
     height: 12px;
-    transform: translateY(-12px);
     background: var(--accent);
     border-radius: 4px;
     box-shadow: 0 0 16px var(--glow);
