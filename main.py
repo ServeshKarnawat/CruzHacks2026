@@ -66,31 +66,37 @@ def data() -> JSONResponse:
     return JSONResponse(rows)
 
 
+
+
+#realtime slider endpoint API KAUSH USE THIS THINGY -------------------------------
+
 @app.get("/flex")
 def flex() -> JSONResponse:
     # Return the latest flex value for the realtime slider.
-    if not DATA_PATH.exists():
-        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404)
+    if not DATA_PATH.exists(): 
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) # CSV file not found
 
-    def clean(value: object) -> str:
-        return str(value).strip() if value is not None else ""
+    def clean(value: object) -> str: # Clean and return string representation of value
+        return str(value).strip() if value is not None else "" # Handle None values
 
-    latest_row = None
-    with DATA_PATH.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
+    latest_row = None # Initialize latest_row to None
+    with DATA_PATH.open(newline="", encoding="utf-8") as handle: # Open CSV file
+        reader = csv.DictReader(handle) # Create a DictReader to read CSV rows as dictionaries
+        for row in reader: # Iterate through each row in the CSV
+             # Update latest_row to the current row
             latest_row = row
 
-    if latest_row is None:
-        return JSONResponse({"error": "No data in CSV"}, status_code=404)
+    if latest_row is None: # No rows found in CSV
+        return JSONResponse({"error": "No data in CSV"}, status_code=404) # Return error response
 
-    flex_value = clean(
-        latest_row.get("flex")
-        or latest_row.get("Filtered_ADC")
-        or latest_row.get("Angle")
-        or latest_row.get("offset")
+    flex_value = clean( # Extract flex value from latest_row
+        latest_row.get("flex") # Try "flex" key first
+        or latest_row.get("Filtered_ADC") # Then "Filtered_ADC" key
+        or latest_row.get("Angle") # Then "Angle" key
+        or latest_row.get("offset")     # Finally "offset" key
     )
-    time_value = clean(
-        latest_row.get("time") or latest_row.get("Timestamp") or latest_row.get("timestamp")
+    time_value = clean( # Extract time value from latest_row
+        latest_row.get("time") or latest_row.get("Timestamp") or latest_row.get("timestamp") # Try various time keys
     )
-    return JSONResponse({"time": time_value, "flex": flex_value})
+    return JSONResponse({"time": time_value, "flex": flex_value}) # Return time and flex values as JSON response
+#-------------------------------------------------------------------------------------
