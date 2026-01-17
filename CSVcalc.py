@@ -7,26 +7,29 @@ SERIAL_PORT = "/dev/cu.usbmodem1103"
 BAUD_RATE = 115200
 FILE_NAME = "arm_stability_data.csv"
 
-# --- NEW VARIABLES ---
-WINDOW_SIZE = 5  # Change this to adjust how many samples to check
+# --- DIRECTION & REP SETTINGS ---
+WINDOW_SIZE = 5         
+STABILITY_THRESHOLD = 2.0  
 flex_history = [] 
 
+# --- NEW TRACKING VARIABLES ---
+rep_count = 0
+last_confirmed_direction = "STABLE" # Tracks the previous significant state
+
 def calculate_direction(history):
-    """Determines UP or DOWN based on trend of the history list."""
     if len(history) < WINDOW_SIZE:
-        return "STABLE" # Not enough data yet
+        return "INITIALIZING"
     
-    # Check if every value is >= the one before it (Increasing/Equal)
+    total_change = history[-1] - history[0]
     is_up = all(history[i] >= history[i-1] for i in range(1, len(history)))
-    if is_up:
+    if is_up and total_change >= STABILITY_THRESHOLD:
         return "UP"
     
-    # Check if every value is <= the one before it (Decreasing/Equal)
     is_down = all(history[i] <= history[i-1] for i in range(1, len(history)))
-    if is_down:
+    if is_down and abs(total_change) >= STABILITY_THRESHOLD:
         return "DOWN"
     
-    return "FLUCTUATING"
+    return "STABLE"
 
 try:
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
@@ -35,54 +38,56 @@ try:
     with open(FILE_NAME, mode='w', newline='') as f:
         writer = csv.writer(f)
         
-        # Added "Stability" and "Trend_Direction" to header
+        # Added "Rep_Count" to the header
         header = ["Timestamp", "Flex_Value", "Accel_X", "Accel_Y", "Accel_Z", 
-                  "Intensity", "Direction", "Stability", "Trend_Direction"]
+                  "Intensity", "Direction", "Stability", "Trend_Direction", "Rep_Count"]
         writer.writerow(header)
 
+    with open(FILE_NAME, mode='a', newline='') as f: # Re-open in append mode for loop
+        writer = csv.writer(f)
         while True:
             if ser.in_waiting > 0:
                 line = ser.readline().decode('utf-8', errors='ignore').strip()
-                
                 if line:
                     data_points = line.split(',')
-                    
                     if len(data_points) == 6:
                         try:
-                            # Parse data
                             current_flex = float(data_points[0])
-                            accel_x = float(data_points[1])
-                            accel_y = float(data_points[2])
-                            accel_z = float(data_points[3])
                             
-                            # 1. Update Flex History
+                            # 1. Update history and get current trend
                             flex_history.append(current_flex)
                             if len(flex_history) > WINDOW_SIZE:
-                                flex_history.pop(0) # Keep list at WINDOW_SIZE
+                                flex_history.pop(0)
                             
-                            # 2. Calculate Direction Trend
-                            trend = calculate_direction(flex_history)
+                            current_trend = calculate_direction(flex_history)
                             
+                            # 2. REP COUNTER LOGIC
+                            # If we were going UP and now we are going DOWN, that's one rep
+                            if last_confirmed_direction == "UP" and current_trend == "DOWN":
+                                rep_count += 1
+                                last_confirmed_direction = "DOWN"
+                            # If we were going DOWN and now we are going UP, that's another rep
+                            elif last_confirmed_direction == "DOWN" and current_trend == "UP":
+                                rep_count += 1
+                                last_confirmed_direction = "UP"
+                            # Initialize the first direction found
+                            elif last_confirmed_direction == "STABLE" and current_trend in ["UP", "DOWN"]:
+                                last_confirmed_direction = current_trend
+
                             # 3. Calculate Stability
-                            stability = accel_x + accel_y + accel_z
-                            
+                            stability = float(data_points[1]) + float(data_points[2]) + float(data_points[3])
                             curr_time = time.strftime("%H:%M:%S")
                             
-                            # 4. Append new columns to the row
-                            row = [curr_time] + data_points + [stability, trend]
-                            
+                            # 4. Save and Print
+                            row = [curr_time] + data_points + [stability, current_trend, rep_count]
                             writer.writerow(row)
                             f.flush() 
                             
-                            print(f"[{curr_time}] Flex: {current_flex} | Trend: {trend} | Stability: {stability:.2f}")
+                            print(f"[{curr_time}] Trend: {current_trend:8} | Reps: {rep_count} | Stab: {stability:.2f}")
                             
                         except ValueError:
-                            print(f"Skipping line due to non-numeric data: {line}")
-                    else:
-                        print(f"Malformed data received: {line}")
+                            continue
 
 except KeyboardInterrupt:
-    print("\nRecording stopped. File saved.")
+    print(f"\nRecording stopped. Final Rep Count: {rep_count}")
     ser.close()
-except Exception as e:
-    print(f"Error: {e}")
