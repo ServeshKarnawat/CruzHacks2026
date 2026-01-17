@@ -7,8 +7,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 # FastAPI app that serves the results dashboard and the CSV-backed data feed.
 app = FastAPI()
 
-DATA_PATH = Path("data.csv")  # CSV columns: time, offset, steadiness
-HTML_PATH = Path("results.html")  # Static HTML dashboard served at /
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "flex_sensor_data.csv"  # CSV columns: time, flex, steadiness (if present)
+HTML_PATH = BASE_DIR / "results.html"  # Static HTML dashboard served at /
 
 
 
@@ -26,16 +27,31 @@ def data() -> JSONResponse:
     if not DATA_PATH.exists():
         return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404)
 
+    def clean(value: object) -> str:
+        return str(value).strip() if value is not None else ""
+
     with DATA_PATH.open(newline="", encoding="utf-8") as handle:
         # DictReader maps each CSV row into a dict using the header names.
         reader = csv.DictReader(handle)
-        rows = [
-            {
-                # Keep strings here; the frontend parses numbers and formats labels.
-                "time": row.get("time", "").strip(),
-                "offset": row.get("offset", "").strip(),
-                "steadiness": row.get("steadiness", "").strip(),
+        rows = []
+        for index, row in enumerate(reader, start=1):
+            # Keep strings here; the frontend parses numbers and formats labels.
+            mapped = {
+                "time": clean(row.get("time") or row.get("Timestamp") or row.get("timestamp")),
+                "offset": clean(
+                    row.get("flex")
+                    or row.get("Filtered_ADC")
+                    or row.get("Angle")
+                    or row.get("offset")
+                ),
+                "steadiness": clean(row.get("steadiness") or row.get("Raw_ADC")),
             }
-            for row in reader
-        ]
+            if index % 380 == 0:
+                rows.append(mapped)
+            last_row = mapped
+
+        if rows and rows[-1] != last_row:
+            rows.append(last_row)
+        elif not rows and "last_row" in locals():
+            rows.append(last_row)
     return JSONResponse(rows)

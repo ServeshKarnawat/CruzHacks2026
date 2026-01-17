@@ -111,9 +111,9 @@
       </header>
       <section class="grid">
         <div class="card">
-          <h2>Offset vs Time</h2>
+          <h2>Flex vs Time</h2>
           <canvas id="offsetChart" width="900" height="320"></canvas>
-          <div class="legend"><span></span>Offset (reference line at 0)</div>
+          <div class="legend"><span></span>Flex (starts at 0)</div>
         </div>
         <div class="card">
           <h2>Steadiness vs Time</h2>
@@ -224,11 +224,15 @@
         if (labels.length > 1) {
           ctx.textAlign = "center";
           ctx.fillStyle = "#6a6258";
-          const steps = 4;
-          for (let i = 0; i <= steps; i++) {
-            const index = Math.round((labels.length - 1) * (i / steps));
-            const x = padding.left + (chartWidth * index) / (labels.length - 1);
+          const step = Math.max(1, options.labelStep || 1);
+          for (let index = 0; index < labels.length; index += step) {
+            const x = padding.left + (chartWidth * index) / Math.max(labels.length - 1, 1);
             ctx.fillText(labels[index], x, height - 20);
+          }
+          if ((labels.length - 1) % step !== 0) {
+            const lastIndex = labels.length - 1;
+            const x = padding.left + (chartWidth * lastIndex) / Math.max(labels.length - 1, 1);
+            ctx.fillText(labels[lastIndex], x, height - 20);
           }
         }
       }
@@ -257,6 +261,10 @@
         return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
       }
 
+      function looksLikeTimestamp(value) {
+        return typeof value === "string" && value.includes(":");
+      }
+
       async function render() {
         let data = [];
         try {
@@ -278,31 +286,37 @@
         }
 
         const labels = data.map(row => row.time);
-        const offsets = data.map(row => parseNumber(row.offset));
+        const flexValues = data.map(row => parseNumber(row.flex ?? row.offset));
         const steadiness = data.map(row => parseNumber(row.steadiness));
-        const times = data.map(row => parseNumber(row.time));
-        const totalTime = Math.max(...times);
+        const times = labels;
+        const numericTimes = times.map(value => parseNumber(value));
+        const totalTime = Math.max(...numericTimes);
         const elapsedEl = document.querySelector(".elapsed");
-        if (elapsedEl && Number.isFinite(totalTime)) {
-          elapsedEl.textContent = "Elapsed: " + formatElapsed(totalTime);
+        if (elapsedEl) {
+          const lastLabel = times[times.length - 1];
+          if (looksLikeTimestamp(lastLabel)) {
+            elapsedEl.textContent = "Time: " + lastLabel;
+          } else if (Number.isFinite(totalTime)) {
+            elapsedEl.textContent = "Elapsed: " + formatElapsed(totalTime);
+          }
         }
 
-        const rawOffsetBounds = computeBounds(offsets, false);
-        const maxAbs = Math.max(Math.abs(rawOffsetBounds.min), Math.abs(rawOffsetBounds.max));
-        const offsetBounds = { min: -maxAbs, max: maxAbs };
+        const flexBounds = computeBounds(flexValues, true);
+        const labelStep = 1;
         drawChart(
           document.getElementById("offsetChart"),
           labels,
-          offsets,
+          flexValues,
           {
-            minY: offsetBounds.min,
-            maxY: offsetBounds.max,
+            minY: flexBounds.min,
+            maxY: flexBounds.max,
             lineColor: "#d26a4f",
             gridColor: "#e4d8c6",
             referenceY: 0,
             referenceColor: "#6b3d2f",
             xLabel: "time",
-            yLabel: "offset"
+            yLabel: "flex",
+            labelStep
           }
         );
 
@@ -319,7 +333,8 @@
             referenceY: null,
             referenceColor: "#6b3d2f",
             xLabel: "time",
-            yLabel: "steadiness"
+            yLabel: "steadiness",
+            labelStep
           }
         );
       }
