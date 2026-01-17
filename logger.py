@@ -27,8 +27,7 @@ try:
             "Stability", 
             "Intensity", 
             "Direction", 
-            "Rep_Count", 
-            "Beep_Freq"
+            "Rep_Count"
         ]
         writer.writerow(header)
 
@@ -41,7 +40,7 @@ try:
                     data_points = line.split(',')
                     
                     # CHANGED: Now expecting 8 values to match your C printf
-                    if len(data_points) == 9:
+                    if len(data_points) == 8:
                         # High-precision timestamp
                         curr_time = time.strftime("%H:%M:%S")
                         row = [curr_time] + data_points

@@ -91,7 +91,7 @@ int main(void) {
         sY = (IMU_ALPHA * curY) + (1.0f - IMU_ALPHA) * sY;
         sZ = (IMU_ALPHA * curZ) + (1.0f - IMU_ALPHA) * sZ;
 
-        float stability = fabsf(sX) + fabsf(sY) + fabsf(sZ); // Total sum of X, Y, and Z
+        float stability = fabsf(sX*sX) + fabsf(sY*sY) + fabsf(sZ*sZ); // Total sum of X, Y, and Z
 
         //high pass f
         float deltaX = sX - prevX;
@@ -115,8 +115,8 @@ int main(void) {
         prevX = sX; prevY = sY; prevZ = sZ;
 
         //debug csv
-        printf("%.1f,%.3f,%.3f,%.3f,%.3f,%.4f,%s,%d,%d\r\n", 
-       sFlex, sX, sY, sZ, stability, movement_intensity, dir, rep_count, freq);
+        printf("%.1f,%.3f,%.3f,%.3f,%.3f,%.4f,%s,%d\r\n", 
+       sFlex, sX, sY, sZ, stability, movement_intensity, dir, rep_count);
 
         for(volatile int i = 0; i < 1500; i++); 
     }
