@@ -10,6 +10,7 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "flex_sensor_data.csv"  # CSV columns: time, flex, steadiness (if present)
 HTML_PATH = BASE_DIR / "results.html"  # Static HTML dashboard served at /
+SESSION_PATH = BASE_DIR / "session.html"  # Flex bar view
 
 
 
@@ -19,6 +20,14 @@ def index() -> HTMLResponse:
     if not HTML_PATH.exists():
         return HTMLResponse("Missing results.html", status_code=404)
     return HTMLResponse(HTML_PATH.read_text(encoding="utf-8"))
+
+
+@app.get("/session", response_class=HTMLResponse)
+def session() -> HTMLResponse:
+    # Serve the flex bar view.
+    if not SESSION_PATH.exists():
+        return HTMLResponse("Missing session.html", status_code=404)
+    return HTMLResponse(SESSION_PATH.read_text(encoding="utf-8"))
 
 
 @app.get("/data")
@@ -55,3 +64,33 @@ def data() -> JSONResponse:
         elif not rows and "last_row" in locals():
             rows.append(last_row)
     return JSONResponse(rows)
+
+
+@app.get("/flex")
+def flex() -> JSONResponse:
+    # Return the latest flex value for the realtime slider.
+    if not DATA_PATH.exists():
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404)
+
+    def clean(value: object) -> str:
+        return str(value).strip() if value is not None else ""
+
+    latest_row = None
+    with DATA_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            latest_row = row
+
+    if latest_row is None:
+        return JSONResponse({"error": "No data in CSV"}, status_code=404)
+
+    flex_value = clean(
+        latest_row.get("flex")
+        or latest_row.get("Filtered_ADC")
+        or latest_row.get("Angle")
+        or latest_row.get("offset")
+    )
+    time_value = clean(
+        latest_row.get("time") or latest_row.get("Timestamp") or latest_row.get("timestamp")
+    )
+    return JSONResponse({"time": time_value, "flex": flex_value})

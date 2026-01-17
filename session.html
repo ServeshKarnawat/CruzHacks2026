@@ -103,28 +103,40 @@
     </div>
 
     <script>
-      const dot = document.getElementById("offsetDot"); 
-      const readout = document.getElementById("offsetReadout"); 
-      let value = 0; 
+      const dot = document.getElementById("offsetDot");
+      const readout = document.getElementById("offsetReadout");
+      const FLEX_MIN = 0;
+      const FLEX_MAX = 1023;
 
-      function clamp(n, min, max) { 
-        return Math.min(Math.max(n, min), max); 
+      function clamp(n, min, max) {
+        return Math.min(Math.max(n, min), max);
       }
 
-      function updateDot(offset) {
-        const normalized = clamp(offset, 0, 1);
+      function updateDot(rawValue) {
+        const normalized = clamp((rawValue - FLEX_MIN) / (FLEX_MAX - FLEX_MIN), 0, 1);
         dot.style.left = `${normalized * 100}%`;
-        readout.textContent = `Flex: ${offset.toFixed(2)}`;
+        readout.textContent = `Flex: ${rawValue.toFixed(2)}`;
       }
 
-      function tick() {
-        value += (Math.random() - 0.5) * 0.12;
-        value = clamp(value, 0, 1);
-        updateDot(value);
+      async function pollFlex() {
+        try {
+          const res = await fetch("/flex");
+          if (!res.ok) {
+            return;
+          }
+          const data = await res.json();
+          const rawValue = Number(data.flex);
+          if (Number.isFinite(rawValue)) {
+            updateDot(rawValue);
+          }
+        } catch (err) {
+          // Keep the last known value if the request fails.
+        }
       }
 
-      updateDot(0);
-      setInterval(tick, 250);
+      updateDot(FLEX_MIN);
+      pollFlex();
+      setInterval(pollFlex, 500);
     </script>
   </body>
 </html>
