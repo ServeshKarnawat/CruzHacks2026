@@ -2,40 +2,48 @@ import serial
 import csv
 import time
 
-# Update this to match your port from earlier
+# Update this to match your specific port
 SERIAL_PORT = "/dev/cu.usbmodem1103" 
 BAUD_RATE = 115200
-FILE_NAME = "flex_sensor_data.csv"
+FILE_NAME = "arm_stability_data.csv"
 
 try:
     # Open the serial port
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
     print(f"Connected to {SERIAL_PORT}. Press Ctrl+C to stop recording.")
 
-    # Open (or create) the CSV file
+    # Open the CSV file
     with open(FILE_NAME, mode='w', newline='') as f:
         writer = csv.writer(f)
         
-        # Write the header row
-        writer.writerow(["Timestamp", "Raw_ADC", "Filtered_ADC", "Angle"])
+        # Header matching your C code output
+        # sFlex, sX, sY, sZ, movement_intensity, dir
+        header = ["Timestamp", "Flex_Value", "Accel_X", "Accel_Y", "Accel_Z", "Intensity", "Direction"]
+        writer.writerow(header)
 
         while True:
             if ser.in_waiting > 0:
-                # Read a line from the Nucleo
-                line = ser.readline().decode('utf-8').strip()
+                # Read line and clean whitespace
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
                 
                 if line:
-                    # Split the comma-separated string from your C code
                     data_points = line.split(',')
                     
-                    # Add a timestamp so you can graph it over time
-                    row = [time.strftime("%H:%M:%S")] + data_points
-                    
-                    # Write to file and "flush" (saves immediately)
-                    writer.writerow(row)
-                    f.flush() 
-                    
-                    print(f"Logged: {row}")
+                    # Verify we received all 6 expected values
+                    if len(data_points) == 6:
+                        # Add a timestamp for time-series analysis
+                        curr_time = time.strftime("%H:%M:%S")
+                        row = [curr_time] + data_points
+                        
+                        # Save to CSV
+                        writer.writerow(row)
+                        f.flush() 
+                        
+                        # Print to terminal for real-time monitoring
+                        print(f"[{curr_time}] X:{data_points[1]} Y:{data_points[2]} Z:{data_points[3]} | {data_points[5]}")
+                    else:
+                        # Log if a line was corrupted or incomplete
+                        print(f"Malformed data received: {line}")
 
 except KeyboardInterrupt:
     print("\nRecording stopped. File saved.")

@@ -7,7 +7,7 @@
 
 #define IMU_ALPHA 0.2f       
 #define FLEX_ALPHA 0.1f      
-#define MOTION_THRESHOLD 0.02f 
+#define MOTION_THRESHOLD 0.01f 
 
 int main(void) {
     BOARD_Init();
