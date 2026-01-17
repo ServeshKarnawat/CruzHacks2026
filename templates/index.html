@@ -18,19 +18,77 @@
         </p>
     </div>
 
-    <div class="display_cont">
-        <div class="graph_title">
-            <p id="off">Offset</p>
+    <div class="panel_cont" id="offset">
+        
+        <div class="panel">
+            <p id="panel_title">Offset</p>
+            <p id="panel_desc">(gyroscope)</p>
+
+            <div class="slider-wrap">
+                <div class="track">
+                <div class="dot" id="offsetDot" style="left: 0%;"></div>
+            </div>
         </div>
 
-        <div class="graph_title">
-            <p id="steady">Steadiness</p>
+        <div class="labels">
+            <span>Unflexed</span>
+            <span>Mid flex</span>
+            <span>Fully flexed</span>
         </div>
+        <div class="readout" id="offsetReadout">Flex: 0.00</div>
     </div>
 
 
-    
+
+    <div class="panel" id="steady">
+        <p id="panel_title">Flex</p>
+        <p id="panel_desc">(flex thingy)</p>
+
+        <div class="slider-wrap">
+            <div class="track">
+                <div class="dot" id="offsetDot" style="left: 0%;"></div>
+            </div>
+        </div>
+
+        <div class="labels">
+            <span>Unflexed</span>
+            <span>Mid flex</span>
+            <span>Fully flexed</span>
+        </div>
+        <div class="readout" id="offsetReadout">Flex: 0.00</div>
+    </div>
+
+    </div>
 
 
+
+
+
+
+
+    <script>
+      const dot = document.getElementById("offsetDot"); 
+      const readout = document.getElementById("offsetReadout"); 
+      let value = 0; 
+
+      function clamp(n, min, max) { 
+        return Math.min(Math.max(n, min), max); 
+      }
+
+      function updateDot(offset) {
+        const normalized = clamp(offset, 0, 1);
+        dot.style.left = `${normalized * 100}%`;
+        readout.textContent = `Flex: ${offset.toFixed(2)}`;
+      }
+
+      function tick() {
+        value += (Math.random() - 0.5) * 0.12;
+        value = clamp(value, 0, 1);
+        updateDot(value);
+      }
+
+      updateDot(0);
+      setInterval(tick, 250);
+    </script>
 </body>
 </html>
