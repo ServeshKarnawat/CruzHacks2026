@@ -18,7 +18,10 @@ def main() -> None:
     filtered = 125.0
 
     while True:
-        raw += random.uniform(-8, 8)
+        if random.random() < 0.2:
+            raw += random.uniform(-30, 30)
+        else:
+            raw += random.uniform(-8, 8)
         raw = max(80, min(180, raw))
         filtered = filtered * 0.8 + raw * 0.2
         append_row(DATA_PATH, raw, filtered)
