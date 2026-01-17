@@ -91,7 +91,7 @@ int main(void) {
         sY = (IMU_ALPHA * curY) + (1.0f - IMU_ALPHA) * sY;
         sZ = (IMU_ALPHA * curZ) + (1.0f - IMU_ALPHA) * sZ;
 
-        float stability = fabsf(sX) + fabsf(sY) + fabsf(sZ); // Total sum of X, Y, and Z
+        float stability = fabsf(sX*sX) + fabsf(sY*sY) + fabsf(sZ*sZ); // Total sum of X, Y, and Z
 
         //high pass f
         float deltaX = sX - prevX;
