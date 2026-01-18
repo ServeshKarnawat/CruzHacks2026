@@ -95,6 +95,6 @@ def plot_steady(df):
     #fig.show()
     fig.write_html('templates/steady.html')
 
-df = pd.read_csv('arm_stability_data_good.csv')
-plot_rom(df)
-plot_steady(df)
+#df = pd.read_csv('arm_stability_data_good.csv')
+#plot_rom(df)
+#plot_steady(df)

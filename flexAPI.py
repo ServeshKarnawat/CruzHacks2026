@@ -5,6 +5,8 @@ import serial
 import time
 import os
 import signal
+import graph
+import pandas as pd
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -130,6 +132,9 @@ def get_steady():
 def stop_collection():
     global logging_active
     logging_active = False
+    df =pd.read_csv("arm_stability_data.csv")
+    graph.plot_rom(df)
+    graph.plot_steady(df)
     # This sends a SIGINT (Control+C signal) to the process itself
     print("Logging stoppped server running")
     return {"status": "success"}
