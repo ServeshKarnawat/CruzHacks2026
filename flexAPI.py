@@ -8,9 +8,10 @@ import signal
 import graph
 import pandas as pd
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,6 +29,7 @@ logging_active = True # This flag controls the loop
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 def start_logging():
     global logging_active
@@ -106,11 +108,50 @@ def index() -> HTMLResponse:
         return HTMLResponse("Missing index.html", status_code=404)
     return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
 
-@app.get("/results", response_class=HTMLResponse) #Get index.html
-def results() -> HTMLResponse:
-    if not RESULTS_PATH.exists():
-        return HTMLResponse("Missing results.html", status_code=404)
-    return HTMLResponse(RESULTS_PATH.read_text(encoding="utf-8"))
+@app.get("/results", response_class=HTMLResponse)
+async def get_results(request: Request):
+    if not DATA_PATH.exists():
+        return HTMLResponse("CSV file not found.", status_code=404)
+
+    try:
+        # ---- Stability average ----
+        stability_sum = 0
+        stability_count = 0
+        flex_peaks = []
+
+        # rep total
+        df = pd.read_csv('arm_stability_data.csv')
+        total_reps = df['Rep_Count'].max()
+
+        for chunk in pd.read_csv(
+            DATA_PATH,
+            usecols=["Flex_Value", "Stability"],
+            chunksize=100_000
+        ):
+            # Stability mean
+            stability_sum += chunk["Stability"].sum()
+            stability_count += chunk["Stability"].count()
+
+            # Flex peaks
+            flex = chunk["Flex_Value"].fillna(0).values
+            for i in range(1, len(flex) - 1):
+                if flex[i] > flex[i - 1] and flex[i] > flex[i + 1]:
+                    flex_peaks.append(flex[i])
+
+        stability_avg = stability_sum / stability_count if stability_count else 0
+        flex_peaks = sorted(flex_peaks, reverse=True)[:200]
+
+        return templates.TemplateResponse("results.html", {
+            "request": request,
+            "flex_data": flex_peaks,
+            "stability_data": stability_avg,
+            "reps": total_reps
+        })
+
+    except Exception as e:
+        print(f"Error processing results: {e}")
+        return HTMLResponse(f"Internal Server Error: {e}", status_code=500)
+
 
 @app.get("/rom.html", response_class=HTMLResponse)
 def get_rom():
