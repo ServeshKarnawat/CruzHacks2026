@@ -1,7 +1,11 @@
 import csv
 import io
+import threading 
+import serial
+import time
+import os
+import signal
 from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
@@ -10,9 +14,44 @@ DATA_PATH = BASE_DIR / "arm_stability_data.csv"
 INDEX_PATH = BASE_DIR / "templates" / "index.html"
 CSS_PATH = BASE_DIR / "main.css"
 STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
-DASHBOARD_PATH = BASE_DIR/ "templates" / "dashboard.html"
+#STATIC_RESULTS_PATH = BASE_DIR / "static" / "css" / "results.css"
+DASHBOARD_PATH = BASE_DIR/ "templates" / "results.html"
+
+
+SERIAL_PORT = "/dev/cu.usbmodem1103" 
+BAUD_RATE = 115200
+logging_active = True # This flag controls the loop
 
 app = FastAPI()
+
+def start_logging():
+    global logging_active
+    try:
+        # Open serial port
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        
+        # Open CSV and write header
+        with open(DATA_PATH, mode='w', newline='') as f:
+            writer = csv.writer(f)
+            header = ["Timestamp", "Flex_Value", "Accel_X", "Accel_Y", "Accel_Z", "Stability", "Intensity", "Direction", "Rep_Count"]
+            writer.writerow(header)
+
+            while logging_active:
+                if ser.in_waiting > 0:
+                    line = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if line:
+                        data_points = line.split(',')
+                        if len(data_points) == 8:
+                            curr_time = time.strftime("%H:%M:%S")
+                            writer.writerow([curr_time] + data_points)
+                            f.flush() # Ensure data is written to disk immediately
+        ser.close()
+    except Exception as e:
+        print(f"Logging Error: {e}")
+
+# --- NEW: START LOGGER ON BOOT ---
+# This starts the function above in a separate 'thread' so the website can still run
+threading.Thread(target=start_logging, daemon=True).start()
 
 _csv_header = None
 _last_pos = 0
@@ -62,7 +101,13 @@ def index() -> HTMLResponse:
         return HTMLResponse("Missing index.html", status_code=404)
     return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
 
-
+@app.post("/stop-collection")
+def stop_collection():
+    global logging_active
+    logging_active = False
+    # This sends a SIGINT (Control+C signal) to the process itself
+    print("Logging stoppped server running")
+    return {"status": "success"}
 
 @app.get("/static/css/main.css")
 def static_main_css() -> FileResponse: #get static/css/main.css
@@ -70,7 +115,7 @@ def static_main_css() -> FileResponse: #get static/css/main.css
         return FileResponse("", status_code=404)
     return FileResponse(STATIC_CSS_PATH)
 
-@app.get("/dashboard", response_class=HTMLResponse)
+@app.get("/results", response_class=HTMLResponse)
 def read_dashboard():
     if not DASHBOARD_PATH.exists():
         return HTMLResponse("Missing dashboard.html", status_code=404)
