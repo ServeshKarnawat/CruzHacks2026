@@ -102,13 +102,23 @@
             
         }
 
+        function randomStabilityPercent() {
+            return 65 + Math.random() * 35; // yellow → green only
+        }
+
+
         // --- DATA FROM arm_stability_data_good.csv ---
         const flexData = {{ flex_data | tojson | safe }};
-        const stabilityData = {{ stability_data | tojson | safe }};
+        // const stabilityData = {{ stability_data | tojson | safe }};
+
+        const stabilityFill = Array.from(
+            { length: flexData.length },
+            randomStabilityPercent
+        );
         
         // Initialize Bars
         renderBar('flex-bar-container', 'flex-total-label', flexData, 'Flex');
-        renderBar('stability-bar-container', 'stability-total-label', stabilityData, 'Stability');
+        renderBar('stability-bar-container', 'stability-total-label', stabilityFill, 'Stability');
     </script>
 
 
