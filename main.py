@@ -1,15 +1,153 @@
-from typing import Union
-from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+import csv
+import io
+import threading 
+import serial
+import time
+import os
+import signal
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "arm_stability_data.csv"
+INDEX_PATH = BASE_DIR / "templates" / "index.html"
+CSS_PATH = BASE_DIR / "main.css"
+STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
+DASHBOARD_PATH = BASE_DIR/ "templates" / "dashboard.html"
+
+
+SERIAL_PORT = "/dev/cu.usbmodem1103" 
+BAUD_RATE = 115200
+logging_active = True # This flag controls the loop
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get('/', response_class=HTMLResponse)
-async def read_item(request: Request):
-        return templates.TemplateResponse("index.html", 
-                                          {"request": request, "message": "index.html"})
+def start_logging():
+    global logging_active
+    try:
+        # Open serial port
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        
+        # Open CSV and write header
+        with open(DATA_PATH, mode='w', newline='') as f:
+            writer = csv.writer(f)
+            header = ["Timestamp", "Flex_Value", "Accel_X", "Accel_Y", "Accel_Z", "Stability", "Intensity", "Direction", "Rep_Count"]
+            writer.writerow(header)
 
+            while logging_active:
+                if ser.in_waiting > 0:
+                    line = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if line:
+                        data_points = line.split(',')
+                        if len(data_points) == 8:
+                            curr_time = time.strftime("%H:%M:%S")
+                            writer.writerow([curr_time] + data_points)
+                            f.flush() # Ensure data is written to disk immediately
+        ser.close()
+    except Exception as e:
+        print(f"Logging Error: {e}")
+
+# --- NEW: START LOGGER ON BOOT ---
+# This starts the function above in a separate 'thread' so the website can still run
+threading.Thread(target=start_logging, daemon=True).start()
+
+_csv_header = None
+_last_pos = 0
+_last_row = None
+
+
+def clean(value: object) -> str: #converts values to trimmed string
+    return str(value).strip() if value is not None else "" 
+
+
+def get_latest_row() -> dict | None:
+    global _csv_header, _last_pos, _last_row
+    if not DATA_PATH.exists():
+        return None
+
+    file_size = DATA_PATH.stat().st_size
+    if _last_pos > file_size:
+        _csv_header = None
+        _last_pos = 0
+        _last_row = None
+
+    with DATA_PATH.open(newline="", encoding="utf-8") as handle:
+        if _last_pos == 0 or _csv_header is None:
+            reader = csv.DictReader(handle)
+            _csv_header = reader.fieldnames
+            for row in reader:
+                _last_row = row
+            _last_pos = handle.tell()
+            return _last_row
+
+        handle.seek(_last_pos)
+        new_data = handle.read()
+        _last_pos = handle.tell()
+
+    if not new_data.strip() or not _csv_header:
+        return _last_row
+
+    reader = csv.DictReader(io.StringIO(new_data), fieldnames=_csv_header)
+    for row in reader:
+        _last_row = row
+    return _last_row
+
+
+@app.get("/", response_class=HTMLResponse) #Get index.html
+def index() -> HTMLResponse:
+    if not INDEX_PATH.exists():
+        return HTMLResponse("Missing index.html", status_code=404)
+    return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
+
+@app.post("/stop-collection")
+def stop_collection():
+    global logging_active
+    logging_active = False
+    # This sends a SIGINT (Control+C signal) to the process itself
+    print("Logging stoppped server running")
+    return {"status": "success"}
+
+@app.get("/static/css/main.css")
+def static_main_css() -> FileResponse: #get static/css/main.css
+    if not STATIC_CSS_PATH.exists():
+        return FileResponse("", status_code=404)
+    return FileResponse(STATIC_CSS_PATH)
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def read_dashboard():
+    if not DASHBOARD_PATH.exists():
+        return HTMLResponse("Missing dashboard.html", status_code=404)
+    return HTMLResponse(DASHBOARD_PATH.read_text(encoding="utf-8"))
+
+
+@app.get("/flex")
+def flex() -> JSONResponse: #get latest csv data
+    if not DATA_PATH.exists():
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) #throw if no datapath
+
+    latest_row = get_latest_row()
+    if latest_row is None: 
+        return JSONResponse({"error": "No data in CSV"}, status_code=404)
+
+
+    flex_value = clean(latest_row.get("Flex_Value")) #get flex value
+    return JSONResponse({ "flex": flex_value}) #sends JSON response with flex value
+
+
+
+@app.get("/stability")
+def stability() -> JSONResponse: #get latest accel data
+    if not DATA_PATH.exists():
+        return JSONResponse({"error": f"Missing {DATA_PATH.name}"}, status_code=404) 
+
+    latest_row = get_latest_row()
+    if latest_row is None:
+        return JSONResponse({"error": "No data in CSV"}, status_code=404)
+
+    try:
+        intensity = float(clean(latest_row.get("Intensity")))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "Invalid intensity data"}, status_code=400)
+
+    return JSONResponse({"intensity": intensity})
