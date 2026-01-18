@@ -8,14 +8,16 @@ import signal
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "arm_stability_data.csv"
 INDEX_PATH = BASE_DIR / "templates" / "index.html"
 CSS_PATH = BASE_DIR / "main.css"
 STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
-#STATIC_RESULTS_PATH = BASE_DIR / "static" / "css" / "results.css"
-DASHBOARD_PATH = BASE_DIR/ "templates" / "results.html"
+STATIC_RESULTS_PATH = BASE_DIR / "static" / "css" / "results.css"
+RESULTS_PATH = BASE_DIR/ "templates" / "results.html"
 
 
 SERIAL_PORT = "/dev/cu.usbmodem1103" 
@@ -23,6 +25,7 @@ BAUD_RATE = 115200
 logging_active = True # This flag controls the loop
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def start_logging():
     global logging_active
@@ -101,6 +104,28 @@ def index() -> HTMLResponse:
         return HTMLResponse("Missing index.html", status_code=404)
     return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
 
+@app.get("/results", response_class=HTMLResponse) #Get index.html
+def results() -> HTMLResponse:
+    if not RESULTS_PATH.exists():
+        return HTMLResponse("Missing results.html", status_code=404)
+    return HTMLResponse(RESULTS_PATH.read_text(encoding="utf-8"))
+
+@app.get("/rom.html", response_class=HTMLResponse)
+def get_rom():
+    # Assuming these are in your templates folder
+    rom_path = BASE_DIR / "templates" / "rom.html"
+    if not rom_path.exists():
+        return HTMLResponse("Missing rom.html", status_code=404)
+    return HTMLResponse(rom_path.read_text(encoding="utf-8"))
+
+@app.get("/steady.html", response_class=HTMLResponse)
+def get_steady():
+    # Assuming these are in your templates folder
+    steady_path = BASE_DIR / "templates" / "steady.html"
+    if not steady_path.exists():
+        return HTMLResponse("Missing steady.html", status_code=404)
+    return HTMLResponse(steady_path.read_text(encoding="utf-8"))
+
 @app.post("/stop-collection")
 def stop_collection():
     global logging_active
@@ -115,11 +140,11 @@ def static_main_css() -> FileResponse: #get static/css/main.css
         return FileResponse("", status_code=404)
     return FileResponse(STATIC_CSS_PATH)
 
-@app.get("/results", response_class=HTMLResponse)
-def read_dashboard():
-    if not DASHBOARD_PATH.exists():
-        return HTMLResponse("Missing dashboard.html", status_code=404)
-    return HTMLResponse(DASHBOARD_PATH.read_text(encoding="utf-8"))
+@app.get("/results/css/results.css")
+def read_results() -> FileResponse:
+    if not STATIC_RESULTS_PATH.exists():
+        return FileResponse("Missing results.html", status_code=404)
+    return FileResponse(STATIC_RESULTS_PATH)
 
 
 @app.get("/flex")

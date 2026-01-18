@@ -2,7 +2,6 @@ import serial
 import csv
 import time
 
-
 # Update this to match your specific port
 SERIAL_PORT = "/dev/cu.usbmodem1103" 
 BAUD_RATE = 115200
