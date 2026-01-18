@@ -24,17 +24,18 @@
             <p id="panel_title">Stability</p>
             <p id="panel_desc">(gyroscope)</p>
 
-            <div class="slider-wrap">
-                <div class="track">
-                  <div class="dot" id="offsetDot"></div>
+            <div class="slider-row">
+                <div class="labels">
+                    <span>Unflexed</span>
+                    <span>Mid flex</span>
+                    <span>Fully flexed</span>
+                </div>
+                <div class="slider-wrap">
+                    <div class="track">
+                      <div class="dot" id="offsetDot"></div>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="labels">
-            <span>Unflexed</span>
-            <span>Mid flex</span>
-            <span>Fully flexed</span>
-        </div>
         <div class="readout" id="offsetReadout">Flex: 0.00</div>
     </div>
 
@@ -44,16 +45,17 @@
         <p id="panel_title">Range of Motion</p>
         <p id="panel_desc">(flex thingy)</p>
 
-        <div class="slider-wrap">
-            <div class="track">
-                <div class="dot" id="flexDot"></div>
+        <div class="slider-row">
+            <div class="labels">
+                <span>Perfect</span>
+                <span>Shaky</span>
+                <span>Bad form</span>
             </div>
-        </div>
-
-        <div class="labels">
-            <span>Perfect</span>
-            <span>Shaky</span>
-            <span>Bad form</span>
+            <div class="slider-wrap">
+                <div class="track">
+                    <div class="dot" id="flexDot"></div>
+                </div>
+            </div>
         </div>
         <div class="readout" id="flexReadout">Flex: 0.00</div>
     </div>

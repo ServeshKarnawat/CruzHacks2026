@@ -7,9 +7,18 @@ body{
     flex-direction: column;
     height: 100vh;
     width: 100vw;
-    /* justify-content: center; */
-    background-color: rgb(61, 61, 61);
+    margin: 0;
+    min-height: 100vh;
+   
+  background:
+    radial-gradient(1200px circle at 20% 10%, rgba(255, 200, 100, 0.18), transparent 40%),
+    radial-gradient(1000px circle at 80% 20%, rgba(255, 120, 80, 0.15), transparent 45%),
+    linear-gradient(180deg, #1b1f26 0%, #0b0e12 100%);
+
+
 }
+    
+
 
 .top_cont{
     /* border: 1px solid green; */
@@ -75,26 +84,47 @@ body{
 }
 
 .panel {
-    width: 32vw;
-    min-width: 260px;
-    padding: 2rem 1.5rem;
-    background: var(--panel);
-    border-radius: 22px;
-    box-shadow: 0 16px 30px rgba(60, 50, 30, 0.12);
-    border: 1px solid white;
-    align-self: center;
+  width: 32vw;
+  min-width: 260px;
+  padding: 2rem 1.5rem;
+
+  /* brighter glass */
+  background: rgba(232, 237, 239, 0.671);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  /* crisp edge + highlight */
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+
+  /* separation from background + subtle inner highlight */
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+  align-self: center;
 }
+
 
 .slider-wrap {
     position: relative;
     height: 45vh;
     width: 100%;
     max-width: 220px;
-    margin: 1rem auto 0;
+    margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 0px;
+}
+.slider-row {
+    margin: 1rem auto 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
 }
 .track {
     position: relative;
@@ -120,10 +150,12 @@ body{
     transition: top 0.15s ease-out;
 }
 .labels {
-    margin-top: 1rem;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    justify-content: space-between;
+    align-items: flex-end;
+    text-align: right;
+    height: 45vh;
     gap: 0.5rem;
     font-size: 0.9rem;
     color: #6a6258;
