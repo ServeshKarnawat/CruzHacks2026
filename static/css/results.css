@@ -24,6 +24,9 @@ body{
     margin-left: 2vw;
     position: relative;
     user-select: none;
+
+    display: flex;
+    flex-direction: column;
 }
 
 .right_dash{
@@ -45,7 +48,23 @@ body{
     overflow-y: scroll;
     overflow-x:hidden;
     box-shadow: /*0px 0px 80px rgb(98, 117, 141),*/ inset 0.3px 0.3px 1px white, inset -0.3px -0.3px 1px white;
+
+    align-content: center;
+    gap: 5vh;
 }
+
+.graph{
+    border-radius: 25px;
+    width: 80%;
+    height: 40%;
+    padding: 0;
+    border: 0;
+}
+
+iframe{
+    border-radius: 25px;
+}
+
 
 
 #loadingOverlay img{
