@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeFlex | Home</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&family=Nabla&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <img src="/static/css/logo.png"
+     alt="SafeFlex logo"
+     class="logo-img">
+
+</head>
+<body>
+ 
+
+  <div class="top_cont">
+    <p class="title">SafeFlex</p>
+  </div>
+
+  <div class="panel_cont">
+
+    <!-- STABILITY PANEL -->
+    <div class="panel">
+      <p id="panel_title">Stability</p>
+      <p id="panel_desc">(Gyroscope)</p>
+
+      <div class="slider-row">
+        <div class="labels">
+          <span>Unstable-</span>
+          <span>Shaky-</span>
+          <span>Fully Stable-</span>
+        </div>
+
+        <div class="slider-wrap">
+          <div class="track">
+            <div class="dot" id="offsetDot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="readout" id="offsetReadout">Stability: 0.00</div>
+    </div>
+
+    <!-- FLEX PANEL -->
+    <div class="panel">
+      <p id="panel_title">Range of Motion</p>
+      <p id="panel_desc">(Flex Sensor)</p>
+
+      <div class="slider-row">
+        <div class="labels">
+          <span>Full Flex-</span>
+          <span>Mid Flex-</span>
+          <span>No Flex-</span>
+        </div>
+
+        <div class="slider-wrap">
+          <div class="track range-track">
+            <div class="dot" id="flexDot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="readout" id="flexReadout">Flex: 0.00</div>
+    </div>
+
+  </div>
+
+ <div class="control-panel" style="text-align: center; padding: 20px;">
+    <button id="stopBtn" class="stop-square">
+      ■ END SESSION & VIEW DASHBOARD
+    </button>
+  </div>
+
+    <script>
+        const flexDot = document.getElementById("flexDot");
+        const flexReadout = document.getElementById("flexReadout");
+        const offsetDot = document.getElementById("offsetDot");
+        const offsetReadout = document.getElementById("offsetReadout");
+        const stopBtn = document.getElementById("stopBtn");
+
+        const FLEX_MIN = 0;
+        const FLEX_MAX = 300;
+        const STABILITY_MIN = 0;
+        const STABILITY_MAX = 0.1;
+
+        // --- NEW: COMBINED STOP LOGIC ---
+        stopBtn.addEventListener("click", async () => {
+            if (confirm("Stop data collection and view results?")) {
+                try {
+                    // Send request to Python to set logging_active = False
+                    const response = await fetch("/stop-collection", { method: "POST" });
+                    
+                    if (response.ok) {
+                        // Small delay to let the file finish flushing
+                        setTimeout(() => {
+                            window.location.href = "/dashboard";
+                        }, 300);
+                    }
+                } catch (err) {
+                    console.error("Stop error:", err);
+                    window.location.href = "/dashboard";
+                }
+            }
+        });
+
+        function clamp(n, min, max) { 
+            return Math.min(Math.max(n, min), max);
+        }
+
+        function lerp(a, b, t) {
+            return Math.round(a + (b - a) * t);
+        }
+
+        function colorForNormalized(normalized, reversed) {
+            const t = reversed ? 1 - normalized : normalized;
+            const green = { r: 76, g: 175, b: 80 };
+            const yellow = { r: 255, g: 235, b: 59 };
+            const red = { r: 255, g: 77, b: 77 };
+            if (t <= 0.5) {
+                const local = t / 0.5;
+                const r = lerp(green.r, yellow.r, local);
+                const g = lerp(green.g, yellow.g, local);
+                const b = lerp(green.b, yellow.b, local);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+            const local = (t - 0.5) / 0.5;
+            const r = lerp(yellow.r, red.r, local);
+            const g = lerp(yellow.g, red.g, local);
+            const b = lerp(yellow.b, red.b, local);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function updateDot(dotEl, readoutEl, rawValue, label, min, max) {
+            const normalized = clamp((rawValue - min) / (max - min), 0, 1);
+            if (!dotEl || !readoutEl) return;
+            dotEl.style.top = `${(1 - normalized) * 100}%`;
+            const trackEl = dotEl.closest(".track");
+            const reversed = trackEl ? trackEl.classList.contains("range-track") : false;
+            const color = colorForNormalized(normalized, reversed);
+            dotEl.style.background = color;
+            dotEl.style.boxShadow = `0 0 16px ${color}`;
+            readoutEl.textContent = `${label}: ${rawValue.toFixed(2)}`;
+        }
+
+        async function pollFlex() {
+            try {
+                const res = await fetch("/flex");
+                if (!res.ok) return;
+                const data = await res.json();
+                const rawValue = Number(data.flex);
+                if (Number.isFinite(rawValue)) {
+                    updateDot(flexDot, flexReadout, rawValue, "Flex", FLEX_MIN, FLEX_MAX);
+                }
+            } catch (err) {}
+        }
+
+        async function pollStability() {
+            try {
+                const res = await fetch("/stability");
+                if (!res.ok) return;
+                const data = await res.json();
+                const intensity = Number(data.intensity);
+                if (Number.isFinite(intensity)) {
+                    updateDot(offsetDot, offsetReadout, intensity, "Stability", STABILITY_MIN, STABILITY_MAX);
+                }
+            } catch (err) {}
+        }
+
+        // Initialize and start intervals
+        updateDot(flexDot, flexReadout, FLEX_MIN, "Flex", FLEX_MIN, FLEX_MAX);
+        updateDot(offsetDot, offsetReadout, STABILITY_MIN, "Stability", STABILITY_MIN, STABILITY_MAX);
+        
+        setInterval(pollFlex, 100); // 100ms is smoother for the computer
+        setInterval(pollStability, 100);
+    </script>
+</body>
+</html>
