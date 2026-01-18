@@ -45,19 +45,19 @@ int main(void) {
         //rep tracking
         if (current_state == STATE_STEADY) {
             //trigger start of rep when flex exceeds steady state
-            if (sFlex > 150) { 
+            if (sFlex > 50) { 
                 current_state = STATE_GOING_UP;
                 peak_reached = false; 
             }
         } 
         else if (current_state == STATE_GOING_UP) {
             //register if peak reached
-            if (sFlex > 230) {
+            if (sFlex > 130) {
                 peak_reached = true;
             }
 
             //rep ends user returns to steady
-            if (sFlex < 140) {
+            if (sFlex < 40) {
                 if (peak_reached) {
                     rep_count++;
                     freq = 800;

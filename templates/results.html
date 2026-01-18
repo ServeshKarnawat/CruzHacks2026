@@ -29,11 +29,87 @@
     </div>
 
     <div class="right_dash">
+
+        <div class="perf_title">
+            <p>Session Performance</p>
+        </div>
         
+        <div class="dashboard-section">
+            <h3 class="chart-title">Flex Range Performance</h3>
+            
+            <div id="flex-bar-container" class="heatmap-bar">
+                </div>
+
+            <div class="label-row">
+                <!-- <span>Rep 1</span> -->
+
+                <span id="flex-total-label">0 Reps</span>
+            </div>
+        </div>
+
+        <div class="dashboard-section">
+            <h3 class="chart-title">Stability Score</h3>
+            
+            <div id="stability-bar-container" class="heatmap-bar">
+                </div>
+
+            <div class="label-row">
+                <!-- <span>Rep 1</span> -->
+
+                <span id="stability-total-label">
+                    0 Reps
+                </span>
+            </div>
+        </div>
 
     </div>
 
     
+
+    <script>
+        function getRGColor(percent) {
+            let r, g;
+            percent = Math.min(Math.max(percent, 0), 100);
+            if (percent < 50) {
+                r = 255;
+                g = Math.round((255 * percent) / 50);
+            } else {
+                g = 255;
+                r = Math.round((255 * (100 - percent)) / 50);
+            }
+            return `rgb(${r}, ${g}, 0)`;
+        }
+
+        function renderBar(containerId, labelId, percentages, typeName) {
+            const container = document.getElementById(containerId);
+            const label = document.getElementById(labelId);
+            container.innerHTML = ''; 
+
+            percentages.forEach((percent, index) => {
+                const box = document.createElement('div');
+                box.style.flex = "1";
+                box.style.height = "100%";
+                box.style.transition = "opacity 0.2s";
+                box.style.backgroundColor = getRGColor(percent);
+                box.style.borderRight = "1px solid rgba(0,0,0,0.1)";
+                box.title = `${typeName} Rep ${index + 1}: ${percent.toFixed(1)}%`;
+                
+                box.onmouseover = () => box.style.opacity = "0.7";
+                box.onmouseout = () => box.style.opacity = "1";
+                
+                container.appendChild(box);
+            });
+            label.innerText = `${percentages.length} Reps Total`;
+        }
+
+        // --- DATA FROM arm_stability_data_good.csv ---
+        const flexData = [57.9, 57.6, 69.5, 63.1, 64.4, 65.3, 63.0, 65.0, 67.2, 67.4, 100.0];
+        const stabilityData = [100.0, 86.1, 99.0, 100.0, 99.0, 96.0, 93.3, 100.0, 99.5, 97.1, 100.0];
+        
+        // Initialize Bars
+        renderBar('flex-bar-container', 'flex-total-label', flexData, 'Flex');
+        renderBar('stability-bar-container', 'stability-total-label', stabilityData, 'Stability');
+    </script>
 
 
     
