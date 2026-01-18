@@ -135,3 +135,22 @@ body{
     text-align: center;
     letter-spacing: 0.5px;
 }
+
+.stop-square {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-family: 'Lexend Deca', sans-serif;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px; /* Slight round but mostly square */
+    display: block;
+    margin: 20px auto;
+    transition: transform 0.1s;
+}
+
+.stop-square:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
