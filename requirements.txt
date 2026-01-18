@@ -4,3 +4,5 @@ fastdtw
 numpy
 scipy
 jinja2
+serial
+plotly
