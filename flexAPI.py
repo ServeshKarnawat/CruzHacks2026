@@ -10,6 +10,7 @@ DATA_PATH = BASE_DIR / "arm_stability_data.csv"
 INDEX_PATH = BASE_DIR / "templates" / "index.html"
 CSS_PATH = BASE_DIR / "main.css"
 STATIC_CSS_PATH = BASE_DIR / "static" / "css" / "main.css"
+DASHBOARD_PATH = BASE_DIR/ "templates" / "dashboard.html"
 
 app = FastAPI()
 
@@ -68,6 +69,12 @@ def static_main_css() -> FileResponse: #get static/css/main.css
     if not STATIC_CSS_PATH.exists():
         return FileResponse("", status_code=404)
     return FileResponse(STATIC_CSS_PATH)
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def read_dashboard():
+    if not DASHBOARD_PATH.exists():
+        return HTMLResponse("Missing dashboard.html", status_code=404)
+    return HTMLResponse(DASHBOARD_PATH.read_text(encoding="utf-8"))
 
 
 @app.get("/flex")
