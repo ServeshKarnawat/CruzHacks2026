@@ -2,12 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results</title>
+
+    <link rel="stylesheet" href="/static/css/results.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&family=Nabla&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+    <style>
+        /* Shared styles to ensure perfect symmetry */
+        .dashboard-section {
+            padding: 20px;
+        }
+
+        .chart-title {
+            font-family: 'Lexend Deca', sans-serif; 
+            color: white; 
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .heatmap-bar {
+            display: flex; 
+            width: 100%; 
+            height: 40px; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            background: #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid #444;
+        }
+
+        .label-row {
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 10px; 
+            color: #aaa; 
+            font-family: 'Roboto', sans-serif; 
+            font-size: 11px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Data Dashboard</h1>
-    <p>This is your new page!</p>
-    <a href="/">Back to Home</a>
+
+    <div class="left_dash">
+        <div class="graph_cont">
+            <iframe src="rom.html" class="graph"></iframe>
+        </div>
+        
+        <div class="graph_cont">
+            <iframe src="steady.html" class="graph"></iframe>
+        </div>
+    </div>
+
+    <div class="right_dash">
+        
+        <div class="dashboard-section">
+            <h3 class="chart-title">Flex Range Performance</h3>
+            
+            <div id="flex-bar-container" class="heatmap-bar">
+                </div>
+
+            <div class="label-row">
+                <span>Rep 1</span>
+                <span id="flex-total-label">0 Reps</span>
+            </div>
+        </div>
+
+        <div class="dashboard-section">
+            <h3 class="chart-title">Stability Score</h3>
+            
+            <div id="stability-bar-container" class="heatmap-bar">
+                </div>
+
+            <div class="label-row">
+                <span>Rep 1</span>
+                <span id="stability-total-label">0 Reps</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function getRGColor(percent) {
+            let r, g;
+            percent = Math.min(Math.max(percent, 0), 100);
+            if (percent < 50) {
+                r = 255;
+                g = Math.round((255 * percent) / 50);
+            } else {
+                g = 255;
+                r = Math.round((255 * (100 - percent)) / 50);
+            }
+            return `rgb(${r}, ${g}, 0)`;
+        }
+
+        function renderBar(containerId, labelId, percentages, typeName) {
+            const container = document.getElementById(containerId);
+            const label = document.getElementById(labelId);
+            container.innerHTML = ''; 
+
+            percentages.forEach((percent, index) => {
+                const box = document.createElement('div');
+                box.style.flex = "1";
+                box.style.height = "100%";
+                box.style.transition = "opacity 0.2s";
+                box.style.backgroundColor = getRGColor(percent);
+                box.style.borderRight = "1px solid rgba(0,0,0,0.1)";
+                box.title = `${typeName} Rep ${index + 1}: ${percent.toFixed(1)}%`;
+                
+                box.onmouseover = () => box.style.opacity = "0.7";
+                box.onmouseout = () => box.style.opacity = "1";
+                
+                container.appendChild(box);
+            });
+            label.innerText = `${percentages.length} Reps Total`;
+        }
+
+        // --- DATA FROM arm_stability_data_good.csv ---
+        const flexData = [57.9, 57.6, 69.5, 63.1, 64.4, 65.3, 63.0, 65.0, 67.2, 67.4, 100.0];
+        const stabilityData = [100.0, 86.1, 99.0, 100.0, 99.0, 96.0, 93.3, 100.0, 99.5, 97.1, 100.0];
+        
+        // Initialize Bars
+        renderBar('flex-bar-container', 'flex-total-label', flexData, 'Flex');
+        renderBar('stability-bar-container', 'stability-total-label', stabilityData, 'Stability');
+    </script>
+    
 </body>
 </html>
